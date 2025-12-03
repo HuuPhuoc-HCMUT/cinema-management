@@ -1,0 +1,169 @@
+const { pool } = require('../db/connection');
+
+class Booking {
+  static async create(bookingData, connection = null) {
+    const conn = connection || pool;
+    const {
+      payment_method, discount_amount = 0, amount_paid,
+      user_id
+    } = bookingData;
+
+    const [result] = await conn.execute(
+      `INSERT INTO booking (payment_method, discount_amount, amount_paid, date_time, user_id)
+       VALUES (?, ?, ?, NOW(), ?)`,
+      [payment_method, discount_amount, amount_paid, user_id]
+    );
+    return result.insertId;
+  }
+
+  static async findById(bookingId) {
+    const [rows] = await pool.execute(
+      `SELECT b.*, 
+              c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+       FROM booking b
+       JOIN customer c ON b.user_id = c.user_id
+       WHERE b.booking_id = ?`,
+      [bookingId]
+    );
+    return rows[0];
+  }
+
+  static async getBookingDetails(bookingId) {
+    const booking = await this.findById(bookingId);
+    if (!booking) return null;
+
+    // Get tickets
+    const [tickets] = await pool.execute(
+      `SELECT t.*, 
+              s.seat_type, s.price as seat_price,
+              m.title as movie_title,
+              th.name as theater_name
+       FROM ticket t
+       JOIN seat s ON t.theater_id_seat = s.theater_id 
+                  AND t.screen_number_seat = s.screen_number 
+                  AND t.seat_number = s.seat_number
+       JOIN showtime st ON t.theater_id_showtime = st.theater_id 
+                       AND t.screen_number_showtime = st.screen_number
+                       AND t.start_time = st.start_time 
+                       AND t.end_time = st.end_time
+                       AND t.date = st.date
+       JOIN movie m ON st.movie_id = m.movie_id
+       JOIN theater th ON t.theater_id_showtime = th.theater_id
+       WHERE t.booking_id = ?`,
+      [bookingId]
+    );
+
+    // Get combos
+    const [combos] = await pool.execute(
+      `SELECT c.combo_id, c.name, c.price, bc.count, c.image_url
+       FROM bookingcombo bc
+       JOIN combo c ON bc.combo_id = c.combo_id
+       WHERE bc.booking_id = ?`,
+      [bookingId]
+    );
+
+    return {
+      ...booking,
+      tickets,
+      combos
+    };
+  }
+
+  static async getByUser(userId, filters = {}) {
+    let query = `
+      SELECT DISTINCT b.*, 
+             COUNT(DISTINCT t.ticket_id) as ticket_count
+      FROM booking b
+      LEFT JOIN ticket t ON b.booking_id = t.booking_id
+      WHERE b.user_id = ?
+    `;
+    const params = [userId];
+
+    query += ' GROUP BY b.booking_id ORDER BY b.date_time DESC';
+
+    const [rows] = await pool.execute(query, params);
+    return rows;
+  }
+
+  static async getAll(filters = {}) {
+    let query = `
+      SELECT b.*, 
+             c.name as customer_name, c.email as customer_email,
+             COUNT(DISTINCT t.ticket_id) as ticket_count
+      FROM booking b
+      JOIN customer c ON b.user_id = c.user_id
+      LEFT JOIN ticket t ON b.booking_id = t.booking_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (filters.date) {
+      query += ' AND DATE(b.date_time) = ?';
+      params.push(filters.date);
+    }
+
+    query += ' GROUP BY b.booking_id ORDER BY b.date_time DESC';
+
+    const [rows] = await pool.execute(query, params);
+    return rows;
+  }
+
+  static async updateScanTime(bookingId) {
+    const [result] = await pool.execute(
+      'UPDATE booking SET scan_at = NOW() WHERE booking_id = ?',
+      [bookingId]
+    );
+    return result.affectedRows > 0;
+  }
+
+  static async delete(bookingId) {
+    const [result] = await pool.execute(
+      'DELETE FROM booking WHERE booking_id = ?',
+      [bookingId]
+    );
+    return result.affectedRows > 0;
+  }
+}
+
+class Ticket {
+  static async create(ticketData, connection = null) {
+    const conn = connection || pool;
+    const {
+      price_paid, theater_id_seat, screen_number_seat, seat_number,
+      theater_id_showtime, screen_number_showtime, start_time, end_time,
+      date, booking_id
+    } = ticketData;
+
+    const [result] = await conn.execute(
+      `INSERT INTO ticket (purchase_at, price_paid, theater_id_seat, screen_number_seat, seat_number,
+                           theater_id_showtime, screen_number_showtime, start_time, end_time, date, booking_id)
+       VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [price_paid, theater_id_seat, screen_number_seat, seat_number,
+       theater_id_showtime, screen_number_showtime, start_time, end_time, date, booking_id]
+    );
+    return result.insertId;
+  }
+
+  static async findById(ticketId) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM ticket WHERE ticket_id = ?',
+      [ticketId]
+    );
+    return rows[0];
+  }
+
+  static async getByBooking(bookingId) {
+    const [rows] = await pool.execute(
+      `SELECT t.*, s.seat_type, s.price as seat_base_price
+       FROM ticket t
+       JOIN seat s ON t.theater_id_seat = s.theater_id 
+                  AND t.screen_number_seat = s.screen_number
+                  AND t.seat_number = s.seat_number
+       WHERE t.booking_id = ?`,
+      [bookingId]
+    );
+    return rows;
+  }
+}
+
+module.exports = { Booking, Ticket };
