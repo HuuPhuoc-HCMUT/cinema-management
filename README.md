@@ -1,0 +1,49 @@
+## 🎨 Đóng góp Frontend
+
+### Quy trình ngắn gọn
+
+```bash
+# 1. Fork repo trên GitHub
+
+# 2. Clone và tạo branch
+git clone https://github.com/pthaiodayne/cinemax
+cd cinemax
+git checkout -b feature/frontend
+
+# 3. Tạo frontend project
+
+# 4. Kết nối API backend
+# base URL: http://localhost:5000/api
+
+# 5. Code frontend...
+
+# 6. Commit và push
+cd ..
+git add frontend/
+git commit -m "feat: Add frontend implementation"
+git push origin feature/frontend
+
+# 7. Tạo Pull Request trên GitHub
+```
+
+### API Endpoints quan trọng
+
+```javascript
+// Authentication
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/profile
+
+// Movies & Showtimes
+GET  /api/movies
+GET  /api/movies/:id
+GET  /api/showtimes
+
+// Booking
+POST /api/bookings
+GET  /api/bookings/my-bookings
+
+// Seats & Combos
+GET  /api/seats/auditorium
+GET  /api/combos
+```
