@@ -1,0 +1,7 @@
+EMAIL: user_ac543f@example.com
+
+REGISTER STATUS: 409
+REGISTER RESPONSE: {"error":"Duplicate entry","message":"A record with this information already exists"}
+
+LOGIN STATUS: 401
+LOGIN RESPONSE: {"error":"Invalid email or password"}

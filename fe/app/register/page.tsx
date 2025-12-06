@@ -1,73 +1,81 @@
 "use client";
 
 import { useState } from "react";
-import AuthCard from "../auth/AuthCard";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
 
-  async function handleRegister(e: any) {
+  async function handleRegister(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const res = await fetch(
+        "http://localhost:8000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            phone,
+            dob: dob || null,
+            gender,
+          }),
+        }
+      );
 
-    const data = await res.json();
-    console.log("Register:", data);
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.message || data.detail || "Register failed");
+        return;
+      }
 
-    if (data.user_id) {
-      alert("Account created! Please login.");
-      window.location.href = "/login";
-    } else {
-      alert("Register failed: " + data.message);
+      alert("Account created!");
+      router.push("/login");
+
+    } catch (err) {
+      console.error(err);
+      alert("Network error");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <AuthCard title="Create a new account">
-      <form className="flex flex-col space-y-4" onSubmit={handleRegister}>
-        
-        <input
-          className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+    <form
+      onSubmit={handleRegister}
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    >
+      <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+      <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+      <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+      <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} />
+      <input type="date" value={dob} onChange={e => setDob(e.target.value)} />
+      <select value={gender} onChange={e => setGender(e.target.value)}>
+        <option value="">Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
 
-        <input
-          className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
-          placeholder="Email address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          type="password"
-          className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
-          placeholder="Password (min 6 chars)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button
-          type="submit"
-          className="mt-4 py-3 bg-gradient-to-r from-red-600 to-red-800 rounded-lg font-semibold text-white hover:opacity-90 transition"
-        >
-          Create Account
-        </button>
-      </form>
-
-      <p className="text-center text-gray-400 mt-6">
-        Already have an account?
-        <a className="text-red-500 hover:underline ml-1" href="/login">
-          Login
-        </a>
-      </p>
-    </AuthCard>
+      <button disabled={loading}>
+        {loading ? "Registering..." : "Register"}
+      </button>
+    </form>
   );
 }

@@ -44,7 +44,7 @@ class Movie {
       // Get crew
       const [crew] = await pool.execute(
         `SELECT c.person_id, c.person_name, c.image_url, p.role
-         FROM Participate p
+         FROM participate p
          JOIN crew c ON p.person_id = c.person_id
          WHERE p.movie_id = ?`,
         [movieId]

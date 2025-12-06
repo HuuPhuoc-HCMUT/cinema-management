@@ -18,22 +18,28 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL,      // FE thật (Vite / React)
-  "http://localhost:5173",       // fallback
-  "http://127.0.0.1:5500",       // Live Server
-  "http://localhost:5500",
-  "http://localhost:3000/",       // Live Server alternative
-  null                           // file://
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5500",
+  "http://localhost:5500"
 ];
 
+// app.use(cors({
+//   origin: (origin, cb) => {
+//     if (!origin) return cb(null, true);
+//     if (allowedOrigins.includes(origin)) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error("CORS blocked: " + origin));
+//     }
+//   },
+//   credentials: true
+// }));
+
+
 app.use(cors({
-  origin: function(origin, callback) {
-    if (allowedOrigins.includes(origin) || !origin) {
-      callback(null, true);   // allow
-    } else {
-      callback(new Error("CORS blocked: " + origin));
-    }
-  },
+  origin: true,
   credentials: true
 }));
 

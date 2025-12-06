@@ -1,65 +1,71 @@
 "use client";
 
 import { useState } from "react";
-import AuthCard from "../auth/AuthCard";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: any) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(
+        "http://localhost:8000/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-    const data = await res.json();
-    console.log("Login response:", data);
+      const data = await res.json();
 
-    if (data.token) {
+      if (!res.ok) {
+        alert(data.message || "Login failed");
+        return;
+      }
+
       localStorage.setItem("token", data.token);
-      alert("Login success!");
-    } else {
-      alert("Login failed: " + data.message);
+      alert("Login success");
+      router.push("/");
+
+    } catch (err) {
+      console.error(err);
+      alert("Network error");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <AuthCard title="Sign in to your account">
-      <form className="flex flex-col space-y-4" onSubmit={handleLogin}>
-        
+    <div style={{ maxWidth: 400, margin: "100px auto" }}>
+      <h2>Login</h2>
+
+      <form onSubmit={handleLogin}>
         <input
-          className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
-          placeholder="Email address"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
           type="password"
-          className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
-          type="submit"
-          className="mt-4 py-3 bg-gradient-to-r from-red-600 to-red-800 rounded-lg font-semibold text-white hover:opacity-90 transition"
-        >
-          Sign In
+        <button disabled={loading}>
+          {loading ? "Signing in..." : "Login"}
         </button>
       </form>
-
-      <p className="text-center text-gray-400 mt-6">
-        Don't have an account?
-        <a className="text-red-500 hover:underline ml-1" href="/register">
-          Register
-        </a>
-      </p>
-    </AuthCard>
+    </div>
   );
 }
